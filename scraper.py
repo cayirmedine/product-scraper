@@ -126,7 +126,7 @@ def scrape_product(driver, url, selectors):
 def safe_filename(name):
     """Keeps the product name readable, only removes characters Windows doesn't allow."""
     name = re.sub(r'[\\/:*?"<>|]', "", name)
-    name = re.sub(r"\s+", " ", name).strip().rstrip(".")
+    name = re.sub(r"\s+", "_", name).strip().rstrip(".")
     return name[:100] or "product"
 
 
@@ -149,7 +149,7 @@ def download_images(driver, product, folder):
         ext = Path(urlparse(url).path).suffix.lower()
         if ext not in IMAGE_EXTENSIONS:
             ext = ".jpg"
-        filename = f"{base}{ext}" if i == 1 else f"{base} {i}{ext}"
+        filename = f"{base}{ext}" if i == 1 else f"{base}_{i}{ext}"
         try:
             response = session.get(url, timeout=20)
             response.raise_for_status()
