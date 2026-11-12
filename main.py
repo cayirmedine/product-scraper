@@ -33,7 +33,7 @@ def scrape_site(driver, site_name, site):
 
         for i, link in enumerate(links, start=1):
             try:
-                product = scrape_product(driver, link, selectors)
+                product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
                 files = download_images(driver, product, image_dir)
                 writer.writerow({
                     **product,

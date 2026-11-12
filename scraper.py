@@ -131,8 +131,14 @@ def _image_url(img):
         return srcset.split(",")[-1].strip().split(" ")[0]  # largest size
     return None
 
+def _clean_image_url(url, pattern):
+    """Removes the part matching `pattern` from the file name, e.g. '-134x150'."""
+    if not pattern:
+        return url
+    parts = urlparse(url)
+    return parts._replace(path=re.sub(pattern, "", parts.path)).geturl()
 
-def scrape_product(driver, url, selectors):
+def scrape_product(driver, url, selectors, image_url_remove=None):
     driver.get(url)
     WebDriverWait(driver, config.TIMEOUT).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, selectors["name"]))
@@ -142,9 +148,10 @@ def scrape_product(driver, url, selectors):
     image_urls = []
     for img in driver.find_elements(By.CSS_SELECTOR, selectors["gallery"]):
         image_url = _image_url(img)
-        if image_url and image_url not in image_urls:
-            image_urls.append(image_url)
-
+        if image_url:
+            image_url = _clean_image_url(image_url, image_url_remove)
+            if image_url not in image_urls:
+                image_urls.append(image_url)
     return {
         "name": _text(driver, selectors["name"]),
         "description": _text(driver, selectors.get("description")),
