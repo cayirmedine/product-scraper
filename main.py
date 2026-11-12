@@ -5,15 +5,17 @@ from pathlib import Path
 
 import config
 from sites import SITES
-from scraper import create_driver, collect_product_links, scrape_product, download_images
+from scraper import (create_driver, collect_product_links, scrape_product,
+                     download_images, download_files)
 
-COLUMNS = ["name", "description", "url", "image_urls", "image_files"]
+COLUMNS = ["name", "description", "url", "image_urls", "image_files", "file_urls", "file_names"]
 
 
 def scrape_site(driver, site_name, site):
     selectors = site["selectors"]
     site_dir = Path(config.OUTPUT_DIR) / site_name
     image_dir = site_dir / "images"
+    file_dir = site_dir / "files"
     csv_file = site_dir / "products.csv"
     site_dir.mkdir(parents=True, exist_ok=True)
 
@@ -25,6 +27,8 @@ def scrape_site(driver, site_name, site):
             if link not in links:
                 links.append(link)
     print(f"{len(links)} products found")
+    if config.MAX_PRODUCTS:
+        links = links[:config.MAX_PRODUCTS]
 
     # utf-8-sig: Turkish characters display correctly when opened in Excel
     with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
@@ -34,14 +38,19 @@ def scrape_site(driver, site_name, site):
         for i, link in enumerate(links, start=1):
             try:
                 product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
-                files = download_images(driver, product, image_dir)
+                images = download_images(driver, product, image_dir)
+                files = download_files(driver, product, file_dir)
                 writer.writerow({
-                    **product,
+                    "name": product["name"],
+                    "description": product["description"],
+                    "url": product["url"],
                     "image_urls": " | ".join(product["image_urls"]),
-                    "image_files": " | ".join(files),
+                    "image_files": " | ".join(images),
+                    "file_urls": " | ".join(f"{doc['title']} ({doc['lang']}): {doc['url']}" for doc in product["files"]),
+                    "file_names": " | ".join(files),
                 })
                 f.flush()  # write each row immediately, nothing lost on crash
-                print(f"  [{i}/{len(links)}] {product['name']} ({len(files)} images)")
+                print(f"  [{i}/{len(links)}] {product['name']} ({len(images)} images, {len(files)} files)")
             except Exception as e:
                 print(f"  [{i}/{len(links)}] Failed: {link} -> {e}")
             time.sleep(config.DELAY)
@@ -68,8 +77,13 @@ def main():
                 scrape_site(driver, name, SITES[name])
             except Exception as e:
                 print(f"Site {name} failed: {e}")
+    except KeyboardInterrupt:
+        print("\nStopped by user. Rows scraped so far are saved in the CSV.")
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            pass  # driver may already be closed after Ctrl+C
 
 
 if __name__ == "__main__":

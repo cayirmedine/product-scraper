@@ -23,14 +23,21 @@ SITES = {
             "https://www.nuovafima.com/en/categoria/electronic-transmitters/",
             "https://www.nuovafima.com/en/categoria/thermowells/"
         ],
+        "image_url_remove": r"-\d+x\d+(?=\.\w+$)",
         "selectors": {
             "card": "#output > article > h2 > a",
             "name": "#content > article > section > header > h1",
             "description": "#content > article > section > header > p",
-            "gallery": "#thumbs img",
-            "image_url_remove": r"-\d+x\d+(?=\.\w+$)",
+            "gallery": "#thumbs img, #content > article > aside > figure > a > img",
             "cookie_button": "#onetrust-accept-btn-handler",
             "next_page": ".pagenav.top a.next",
+            "files": {
+                "row": "#files tbody tr",
+                "title": "td:nth-child(2)",
+                "link": "td:nth-child(3) a.file",
+                "filter_cell": "td:nth-child(1)",      # NAME column
+                "filter_prefix": "Data Sheet",         # keep only rows whose NAME starts with this
+            },
         },
     },
 }
