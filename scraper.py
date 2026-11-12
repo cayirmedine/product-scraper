@@ -59,13 +59,14 @@ def _card_links(driver, selectors):
 
 
 def _go_to_next_page(driver, selectors, current_links):
-    """Goes to the next page. Returns False when there is no next page."""
+    """Goes to the next page or loads more products.
+    Returns False when there is nothing more to load."""
     selector = selectors.get("next_page")
     if not selector:
         return False
     buttons = [b for b in driver.find_elements(By.CSS_SELECTOR, selector) if b.is_displayed()]
     if not buttons:
-        return False
+        return False  # no "Next" / "Load more" button -> done
     button = buttons[0]
 
     # Real link (e.g. "?page=2"): open it directly
@@ -74,19 +75,34 @@ def _go_to_next_page(driver, selectors, current_links):
         driver.get(button.get_attribute("href"))
         return True
 
-    # JavaScript pagination (href="#"): click and wait until the product list changes
+    # JavaScript button: click, then wait until the list is replaced (pagination)
+    # or gets longer ("Load more" stacking products under each other)
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'}); arguments[0].click();", button)
+    return _wait_for_list_change(driver, selectors, current_links)
+
+
+def _scroll_for_more(driver, selectors, current_links):
+    """Infinite scroll: scrolls to the bottom and waits for more products to appear."""
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    return _wait_for_list_change(driver, selectors, current_links)
+
+
+def _wait_for_list_change(driver, selectors, current_links):
     first_link = current_links[0] if current_links else None
-    driver.execute_script("arguments[0].click();", button)
+
+    def changed(d):
+        links = _card_links(d, selectors)
+        return links and (links[0] != first_link or len(links) > len(current_links))
+
     try:
-        WebDriverWait(driver, config.TIMEOUT, ignored_exceptions=[StaleElementReferenceException]).until(
-            lambda d: (links := _card_links(d, selectors)) and links[0] != first_link
-        )
+        WebDriverWait(driver, config.TIMEOUT, ignored_exceptions=[StaleElementReferenceException]).until(changed)
         return True
     except TimeoutException:
-        return False  # nothing changed -> last page
+        return False  # nothing new appeared -> last page
 
 
-def collect_product_links(driver, url, selectors):
+def collect_product_links(driver, url, selectors, pagination=None):
+    """pagination: None (default: 'next_page' link/button) or "scroll" (infinite scroll)."""
     links = []
     driver.get(url)
     accept_cookies(driver, selectors)
@@ -104,11 +120,15 @@ def collect_product_links(driver, url, selectors):
         page_links = _card_links(driver, selectors)
         new_links = [link for link in page_links if link not in links]
         if not new_links:
-            break  # same products again -> we are past the last page
+            break  # nothing new -> we are past the last page
         links.extend(new_links)
         print(f"  Page {page} done, {len(links)} links in total")
 
-        if not _go_to_next_page(driver, selectors, page_links):
+        if pagination == "scroll":
+            more = _scroll_for_more(driver, selectors, page_links)
+        else:
+            more = _go_to_next_page(driver, selectors, page_links)
+        if not more:
             break
         time.sleep(config.DELAY)
 
@@ -143,8 +163,9 @@ def _clean_image_url(url, pattern):
 
 
 def _file_links(driver, files_config):
-    """Reads the documents table row by row.
-    Each row gives a title (e.g. 'Data sheet') and one link per language ('lang-xx' class)."""
+    """Reads the document list row by row.
+    Each row gives a title (e.g. 'Data sheet') and one or more links.
+    The language comes from 'lang_cell' text like "(EN)", or from a 'lang-xx' class on the link."""
     files = []
     if not files_config:
         return files
@@ -165,12 +186,24 @@ def _file_links(driver, files_config):
             # textContent also works when the tab is hidden (.text would be empty)
             title = cells[0].get_attribute("textContent").strip() if cells else ""
 
+        # Language from text, e.g. "Datasheet OMNIPLUS-F (EN)" -> "en"
+        row_lang = None
+        if files_config.get("lang_cell"):
+            cells = row.find_elements(By.CSS_SELECTOR, files_config["lang_cell"])
+            text = cells[0].get_attribute("textContent") if cells else ""
+            codes = re.findall(r"\(([^()]+)\)", text)
+            row_lang = codes[-1].strip().lower() if codes else "file"
+
         for a in row.find_elements(By.CSS_SELECTOR, files_config["link"]):
             url = a.get_attribute("href")
             if not url or any(f["url"] == url for f in files):
                 continue
-            match = re.search(r"\blang-([a-zA-Z]+)\b", a.get_attribute("class") or "")
-            lang = match.group(1).lower() if match else "file"
+            if row_lang:
+                lang = row_lang
+            else:
+                # Language from a 'lang-xx' class on the link
+                match = re.search(r"\blang-([a-zA-Z]+)\b", a.get_attribute("class") or "")
+                lang = match.group(1).lower() if match else "file"
             files.append({"title": title, "lang": lang, "url": url})
     return files
 
@@ -192,7 +225,6 @@ def scrape_product(driver, url, selectors, image_url_remove=None):
 
     return {
         "name": _text(driver, selectors["name"]),
-        "description": _text(driver, selectors.get("description")),
         "url": url,
         "image_urls": image_urls,
         "files": _file_links(driver, selectors.get("files")),
@@ -236,7 +268,7 @@ def download_images(driver, product, folder):
         ext = Path(urlparse(url).path).suffix.lower()
         if ext not in IMAGE_EXTENSIONS:
             ext = ".jpg"
-        filename = f"{base}{ext}" if i == 1 else f"{base}_{i}{ext}"
+        filename = f"{base}_{i}{ext}"
         try:
             _download(session, url, folder / filename)
             files.append(filename)

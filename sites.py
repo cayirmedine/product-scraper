@@ -27,7 +27,6 @@ SITES = {
         "selectors": {
             "card": "#output > article > h2 > a",
             "name": "#content > article > section > header > h1",
-            "description": "#content > article > section > header > p",
             "gallery": "#thumbs img, #content > article > aside > figure > a > img",
             "cookie_button": "#onetrust-accept-btn-handler",
             "next_page": ".pagenav.top a.next",
@@ -40,4 +39,35 @@ SITES = {
             },
         },
     },
+    "senseca": {
+        "category_urls": [
+            "https://www.senseca.com/en/products/process-automation/flow",
+            "https://www.senseca.com/en/products/process-automation/level",
+            "https://www.senseca.com/en/products/process-automation/pressure",
+            "https://www.senseca.com/en/products/process-automation/temperature",
+            "https://www.senseca.com/en/products/process-automation/liquid-analysis",
+            "https://www.senseca.com/en/products/process-automation/gas-analysis",
+            "https://www.senseca.com/en/products/process-automation/electronics",
+            "https://www.senseca.com/en/products/process-automation/digital-communication",
+            "https://www.senseca.com/en/products/process-automation/monitoring-data-acquisition-systems",
+            "https://www.senseca.com/en/products/process-automation/apps-software",
+            "https://www.senseca.com/en/products/process-automation/filters",
+            "https://www.senseca.com/en/products/process-automation/accessories",
+        ],
+        "selectors": {
+            "card": "#products > div > div.product-teaser-grid__grid > a",
+            "name": ".product-hero__content h1",
+            "gallery": ".media-gallery__main-slide img",
+            "cookie_button": "#onetrust-accept-btn-handler",
+            "next_page": ".load-more__button-wrapper button",
+            "files": {
+                "row": "[id$='-panel-downloads'] ul > li",           # each download item
+                "title": ".object-list-item__meta-title",            # "Data sheet" -> used in file name
+                "filter_cell": ".object-list-item__meta-title",      # keep only rows where this...
+                "filter_prefix": "Data sheet",                       # ...starts with "Data sheet"
+                "lang_cell": ".object-list-item__list > h5",         # "(EN)" in this text -> "en"
+                "link": "a",                                         # download link inside the item
+            },
+        }
+    }
 }

@@ -8,7 +8,7 @@ from sites import SITES
 from scraper import (create_driver, collect_product_links, scrape_product,
                      download_images, download_files)
 
-COLUMNS = ["name", "description", "url", "image_urls", "image_files", "file_urls", "file_names"]
+COLUMNS = ["name", "url", "image_urls", "image_files", "file_urls", "file_names"]
 
 
 def scrape_site(driver, site_name, site):
@@ -23,7 +23,7 @@ def scrape_site(driver, site_name, site):
     links = []
     for category_url in site["category_urls"]:
         print(f"Category: {category_url}")
-        for link in collect_product_links(driver, category_url, selectors):
+        for link in collect_product_links(driver, category_url, selectors, site.get("pagination")):
             if link not in links:
                 links.append(link)
     print(f"{len(links)} products found")
@@ -42,7 +42,6 @@ def scrape_site(driver, site_name, site):
                 files = download_files(driver, product, file_dir)
                 writer.writerow({
                     "name": product["name"],
-                    "description": product["description"],
                     "url": product["url"],
                     "image_urls": " | ".join(product["image_urls"]),
                     "image_files": " | ".join(images),
