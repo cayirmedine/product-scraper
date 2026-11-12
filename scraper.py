@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 
 import config
 
@@ -47,6 +47,42 @@ def accept_cookies(driver, selectors):
     except TimeoutException:
         pass
 
+def _card_links(driver, selectors):
+    links = []
+    for a in driver.find_elements(By.CSS_SELECTOR, selectors["card"]):
+        href = a.get_attribute("href")
+        if href:
+            links.append(href)
+    return links
+
+
+def _go_to_next_page(driver, selectors, current_links):
+    """Goes to the next page. Returns False when there is no next page."""
+    selector = selectors.get("next_page")
+    if not selector:
+        return False
+    buttons = [b for b in driver.find_elements(By.CSS_SELECTOR, selector) if b.is_displayed()]
+    if not buttons:
+        return False
+    button = buttons[0]
+
+    # Real link (e.g. "?page=2"): open it directly
+    raw_href = (button.get_dom_attribute("href") or "").strip()
+    if raw_href and not raw_href.startswith("#") and not raw_href.lower().startswith("javascript"):
+        driver.get(button.get_attribute("href"))
+        return True
+
+    # JavaScript pagination (href="#"): click and wait until the product list changes
+    first_link = current_links[0] if current_links else None
+    driver.execute_script("arguments[0].click();", button)
+    try:
+        WebDriverWait(driver, config.TIMEOUT, ignored_exceptions=[StaleElementReferenceException]).until(
+            lambda d: (links := _card_links(d, selectors)) and links[0] != first_link
+        )
+        return True
+    except TimeoutException:
+        return False  # nothing changed -> last page
+
 
 def collect_product_links(driver, url, selectors):
     links = []
@@ -63,20 +99,15 @@ def collect_product_links(driver, url, selectors):
             break
 
         lazy_scroll(driver)
-        for a in driver.find_elements(By.CSS_SELECTOR, selectors["card"]):
-            href = a.get_attribute("href")
-            if href and href not in links:
-                links.append(href)
+        page_links = _card_links(driver, selectors)
+        new_links = [link for link in page_links if link not in links]
+        if not new_links:
+            break  # same products again -> we are past the last page
+        links.extend(new_links)
         print(f"  Page {page} done, {len(links)} links in total")
 
-        next_selector = selectors.get("next_page")
-        if not next_selector:
+        if not _go_to_next_page(driver, selectors, page_links):
             break
-        next_links = driver.find_elements(By.CSS_SELECTOR, next_selector)
-        href = next_links[0].get_attribute("href") if next_links else None
-        if not href:
-            break
-        driver.get(href)
         time.sleep(config.DELAY)
 
     return links
@@ -116,7 +147,6 @@ def scrape_product(driver, url, selectors):
 
     return {
         "name": _text(driver, selectors["name"]),
-        "price": _text(driver, selectors.get("price")),
         "description": _text(driver, selectors.get("description")),
         "url": url,
         "image_urls": image_urls,

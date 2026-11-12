@@ -7,7 +7,7 @@
 #       name      -> product name on the product page
 #       gallery   -> product images on the product page
 # Optional selectors:
-#       price, description -> left empty in the CSV if missing
+#       description -> left empty in the CSV if missing
 #       next_page          -> "next" link for pagination (omit if no pagination)
 #       cookie_button      -> cookie consent button to click once
 
@@ -29,6 +29,7 @@ SITES = {
             "description": "#content > article > section > header > p",
             "gallery": "#content > article > aside > figure > a",
             "cookie_button": "#onetrust-accept-btn-handler",
+            "next_page": ".pagenav.top a.next",
         },
     },
 }

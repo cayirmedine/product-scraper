@@ -7,7 +7,7 @@ import config
 from sites import SITES
 from scraper import create_driver, collect_product_links, scrape_product, download_images
 
-COLUMNS = ["name", "price", "description", "url", "image_urls", "image_files"]
+COLUMNS = ["name", "description", "url", "image_urls", "image_files"]
 
 
 def scrape_site(driver, site_name, site):
