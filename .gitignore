@@ -230,3 +230,5 @@ data/images/*
 !data/images/.gitkeep
 logs/*
 !logs/.gitkeep
+
+output/
