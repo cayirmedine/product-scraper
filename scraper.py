@@ -4,8 +4,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from seleniumbase import Driver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,11 +16,12 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 
 
 def create_driver():
-    options = Options()
-    if config.HEADLESS:
-        options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
-    return webdriver.Chrome(options=options)
+    driver = Driver(
+        uc=True,
+        headless=config.HEADLESS,
+    )
+    driver.set_window_size(1920, 1080)
+    return driver
 
 
 def lazy_scroll(driver, step=800, pause=0.7):
