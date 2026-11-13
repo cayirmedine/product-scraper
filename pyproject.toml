@@ -6,9 +6,10 @@ readme = "README.md"
 authors = [
     { name = "Medine Çayır", email = "hmedinecayir@gmail.com" }
 ]
-requires-python = ">=3.15"
+requires-python = ">=3.13"
 dependencies = [
     "2captcha-python>=2.1.2",
+    "seleniumbase>=4.57.1",
 ]
 
 [project.scripts]
