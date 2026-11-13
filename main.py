@@ -35,7 +35,7 @@ def scrape_site(driver, site_name, site):
     done = {p["url"] for p in products}
     links = [link for link in links if link not in done]
     print(f"{len(done)} already scraped, {len(links)} new products to scrape")
-    
+
     for i, link in enumerate(links, start=1):
         try:
             product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
@@ -58,10 +58,12 @@ def scrape_site(driver, site_name, site):
 
 
 def main():
+    # Parse command-line arguments for site selection
     parser = argparse.ArgumentParser(description="Product scraper")
     parser.add_argument("sites", nargs="*", help="site names from sites.py (empty = all)")
     args = parser.parse_args()
 
+    # Determine which sites to scrape based on command-line arguments
     names = args.sites or list(SITES)
     unknown = [n for n in names if n not in SITES]
     if unknown:
@@ -77,7 +79,7 @@ def main():
             except Exception as e:
                 print(f"Site {name} failed: {e}")
     except KeyboardInterrupt:
-        print("\nStopped by user. Rows scraped so far are saved in the CSV.")
+        print("\nStopped by user. Rows scraped so far are saved in the JSON file.")
     finally:
         try:
             driver.quit()
