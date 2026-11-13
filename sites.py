@@ -69,5 +69,42 @@ SITES = {
                 "link": "a",                                         # download link inside the item
             },
         }
+    },
+    "holmatro": {
+        "category_urls": [
+            "https://www.holmatro.com/hydraulic-solutions/lifting/hydraulic-cylinders/",
+            "https://www.holmatro.com/hydraulic-solutions/lifting/hydraulic-pumps/",
+            "https://www.holmatro.com/hydraulic-solutions/lifting/flowpanels-valve-blocks/",
+            "https://www.holmatro.com/hydraulic-solutions/lifting/hydraulic-hoses/",
+            "https://www.holmatro.com/hydraulic-solutions/lifting/hydraulic-system-components/",
+            "https://www.holmatro.com/hydraulic-solutions/lifting/other-lifting-tools/",
+            "https://www.holmatro.com/hydraulic-solutions/heavy-lifting-transportation-systems/skidding-systems/",
+            "https://www.holmatro.com/hydraulic-solutions/heavy-lifting-transportation-systems/ring-climbing-cylinder-set/",
+            "https://www.holmatro.com/hydraulic-solutions/heavy-lifting-transportation-systems/step-jacks/",
+            "https://www.holmatro.com/hydraulic-solutions/heavy-lifting-transportation-systems/split-flow-pump-4-outlets/",
+            "https://www.holmatro.com/hydraulic-solutions/heavy-lifting-transportation-systems/offshore-wind-systems-services/",
+            "https://www.holmatro.com/hydraulic-solutions/rerailing-vehicle-recovery/lifting-sliding-components/",
+            "https://www.holmatro.com/hydraulic-solutions/rerailing-vehicle-recovery/operational-components/",
+            "https://www.holmatro.com/hydraulic-solutions/rerailing-vehicle-recovery/compact-rerailing-unit/",
+            "https://www.holmatro.com/hydraulic-solutions/cutting/hydraulic-cutters/",
+            "https://www.holmatro.com/hydraulic-solutions/cutting/hydraulic-pumps/",
+            "https://www.holmatro.com/hydraulic-solutions/cutting/hydraulic-hoses/",
+            "https://www.holmatro.com/hydraulic-solutions/cutting/accessories/"
+        ],
+        "selectors": {
+            "card": ".product-card-wrapper a",
+            "name": ".product-hero h1",
+            "gallery": ".swiper-thumbs__slide img",
+            "cookie_button": "#onetrust-accept-btn-handler",
+            "next_page": ".archive-product__pagination a.next",
+            "image_url_remove": r"-\d+x\d+(?=\.\w+$)",
+            "files": {
+                "row": "#downloads > div > div",
+                "filter_cell": ".asset__title",
+                "filter_suffix": "Spec sheet, A4 metric",
+                "link": ".asset__content a",
+                "label": "Spec_sheet",
+            },
+        }
     }
 }
