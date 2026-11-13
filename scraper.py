@@ -170,18 +170,21 @@ def _file_links(driver, files_config):
     if not files_config:
         return files
     prefix = (files_config.get("filter_prefix") or "").lower()
+    suffix = (files_config.get("filter_suffix") or "").lower()
     filter_cell = files_config.get("filter_cell", "td:nth-child(1)")
 
     for row in driver.find_elements(By.CSS_SELECTOR, files_config["row"]):
-        # Keep only rows whose NAME starts with the prefix (e.g. "Data Sheet")
-        if prefix:
+        # Keep only rows whose text starts / ends with the given value
+        if prefix or suffix:
             cells = row.find_elements(By.CSS_SELECTOR, filter_cell)
-            name = cells[0].get_attribute("textContent").strip().lower() if cells else ""
-            if not name.startswith(prefix):
+            text = " ".join(cells[0].get_attribute("textContent").split()).lower() if cells else ""
+            if prefix and not text.startswith(prefix):
+                continue
+            if suffix and not text.endswith(suffix):
                 continue
 
-        title = ""
-        if files_config.get("title"):
+        title = files_config.get("label", "")   # fixed label, e.g. "Spec_sheet"
+        if not title and files_config.get("title"):
             cells = row.find_elements(By.CSS_SELECTOR, files_config["title"])
             # textContent also works when the tab is hidden (.text would be empty)
             title = cells[0].get_attribute("textContent").strip() if cells else ""
@@ -192,18 +195,17 @@ def _file_links(driver, files_config):
             cells = row.find_elements(By.CSS_SELECTOR, files_config["lang_cell"])
             text = cells[0].get_attribute("textContent") if cells else ""
             codes = re.findall(r"\(([^()]+)\)", text)
-            row_lang = codes[-1].strip().lower() if codes else "file"
+            row_lang = codes[-1].strip().lower() if codes else None
 
         for a in row.find_elements(By.CSS_SELECTOR, files_config["link"]):
             url = a.get_attribute("href")
             if not url or any(f["url"] == url for f in files):
                 continue
-            if row_lang:
-                lang = row_lang
-            else:
-                # Language from a 'lang-xx' class on the link
+            lang = row_lang
+            if not lang:
+                # Language from a 'lang-xx' class on the link (None if there is none)
                 match = re.search(r"\blang-([a-zA-Z]+)\b", a.get_attribute("class") or "")
-                lang = match.group(1).lower() if match else "file"
+                lang = match.group(1).lower() if match else None
             files.append({"title": title, "lang": lang, "url": url})
     return files
 

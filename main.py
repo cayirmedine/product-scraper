@@ -28,8 +28,14 @@ def scrape_site(driver, site_name, site):
     if config.MAX_PRODUCTS:
         links = links[:config.MAX_PRODUCTS]
 
-    # utf-8-sig: Turkish characters display correctly when opened in Excel
+        # Resume: keep products from the previous run and skip their links
     products = []
+    if json_file.exists():
+        products = json.loads(json_file.read_text(encoding="utf-8"))
+    done = {p["url"] for p in products}
+    links = [link for link in links if link not in done]
+    print(f"{len(done)} already scraped, {len(links)} new products to scrape")
+    
     for i, link in enumerate(links, start=1):
         try:
             product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
@@ -38,9 +44,10 @@ def scrape_site(driver, site_name, site):
             products.append({
                 "name": product["name"],
                 "url": product["url"],
-                "image_names": images,
+                "img_names": images,
                 "file_names": files,
             })
+            # Rewrite the file after every product, so nothing is lost if the run crashes
             json_file.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"  [{i}/{len(links)}] {product['name']} ({len(images)} images, {len(files)} files)")
         except Exception as e:
