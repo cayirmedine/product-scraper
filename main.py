@@ -1,5 +1,5 @@
 import argparse
-import csv
+import json
 import time
 from pathlib import Path
 
@@ -8,15 +8,13 @@ from sites import SITES
 from scraper import (create_driver, collect_product_links, scrape_product,
                      download_images, download_files)
 
-COLUMNS = ["name", "url", "image_urls", "image_files", "file_urls", "file_names"]
-
 
 def scrape_site(driver, site_name, site):
     selectors = site["selectors"]
     site_dir = Path(config.OUTPUT_DIR) / site_name
     image_dir = site_dir / "images"
     file_dir = site_dir / "files"
-    csv_file = site_dir / "products.csv"
+    json_file = site_dir / "products.json"
     site_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n=== {site_name} ===")
@@ -31,30 +29,25 @@ def scrape_site(driver, site_name, site):
         links = links[:config.MAX_PRODUCTS]
 
     # utf-8-sig: Turkish characters display correctly when opened in Excel
-    with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=COLUMNS)
-        writer.writeheader()
+    products = []
+    for i, link in enumerate(links, start=1):
+        try:
+            product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
+            images = download_images(driver, product, image_dir)
+            files = download_files(driver, product, file_dir)
+            products.append({
+                "name": product["name"],
+                "url": product["url"],
+                "image_names": images,
+                "file_names": files,
+            })
+            json_file.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"  [{i}/{len(links)}] {product['name']} ({len(images)} images, {len(files)} files)")
+        except Exception as e:
+            print(f"  [{i}/{len(links)}] Failed: {link} -> {e}")
+        time.sleep(config.DELAY)
 
-        for i, link in enumerate(links, start=1):
-            try:
-                product = scrape_product(driver, link, selectors, site.get("image_url_remove"))
-                images = download_images(driver, product, image_dir)
-                files = download_files(driver, product, file_dir)
-                writer.writerow({
-                    "name": product["name"],
-                    "url": product["url"],
-                    "image_urls": " | ".join(product["image_urls"]),
-                    "image_files": " | ".join(images),
-                    "file_urls": " | ".join(f"{doc['title']} ({doc['lang']}): {doc['url']}" for doc in product["files"]),
-                    "file_names": " | ".join(files),
-                })
-                f.flush()  # write each row immediately, nothing lost on crash
-                print(f"  [{i}/{len(links)}] {product['name']} ({len(images)} images, {len(files)} files)")
-            except Exception as e:
-                print(f"  [{i}/{len(links)}] Failed: {link} -> {e}")
-            time.sleep(config.DELAY)
-
-    print(f"Done: {csv_file}")
+    print(f"Done: {json_file}")
 
 
 def main():
